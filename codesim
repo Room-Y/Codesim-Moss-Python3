@@ -1,0 +1,97 @@
+#!/usr/bin/python3
+# coding=utf-8
+
+import sys
+import os
+import hashlib
+
+# 将源代码编译为汇编语言并去除空格与换行符
+def complie(file):
+    if not os.path.isfile(file):
+        sys.stderr.write("The file not found\n")
+        sys.exit()
+    cmpl = 'gcc -S ' + file
+    os.system(cmpl)
+    filename = os.path.basename(file).split('.')[0] + '.s'
+    if not os.path.isfile(filename):
+        sys.stderr.write("The file not found\n")
+        sys.exit()
+    f = open(filename, 'r')
+    string = ''.join(f.readlines())
+    string = string.replace(' ', "")
+    string = string.replace('\n', "")
+    f.close()
+    os.remove(filename)
+    return string
+
+
+# 生成字符串的hash值
+def hash(text):
+    # generate the hash values
+    hashvalue = hashlib.sha1(text.encode('utf-8'))
+    hashend4 = hashvalue.hexdigest()[-4:]
+    res16 = int(hashend4, 16)   # select the last 16 bits and return int
+    return res16
+
+# 将字符串切片为长度为k的子串返回子串列表, 列表内元组包含子串，子串hash值，子串起始终止位置
+# k值选取应该考虑到编译后常见词的长度
+def k_grams(text, k = 10):
+    lens = len(text)
+    kgrams = []
+    for i in range(lens - k + 1):
+        kstr = text[i:i+k]
+        shash = hash(kstr)
+        kgrams.append(shash)
+    return kgrams
+
+# 找到列表最小值的索引
+def findMinvOfIndex(arr):
+    minIndex = 0
+    for i in range(len(arr)):
+        if arr[minIndex] > arr[i]:
+            minIndex = i
+    return minIndex
+
+# winnowing算法选取hash值
+def winnowing(hashList, windowSize = 4):
+    lens = len(hashList)
+    premin = -1
+    fingerPrintList = []
+    for i in range(lens - windowSize):
+        win = hashList[i : i+windowSize]
+        curmin = i + findMinvOfIndex(win)
+        if not curmin == premin:
+            fingerPrintList.append(hashList[curmin])
+            premin = curmin
+    return fingerPrintList
+
+# 计算相似度
+def similarity(file1, file2):
+    textfile1 = complie(file1)
+    textfile2 = complie(file2)
+    kgramhashfile1 = k_grams(textfile1)
+    kgramhashfile2 = k_grams(textfile2)
+    FPListfile1 = winnowing(kgramhashfile1)
+    FPListfile2 = winnowing(kgramhashfile2)
+    length1 = len(FPListfile1)
+    length2 = len(FPListfile2)
+    count = 0
+    for i in range(length1):
+        for j in range(length2):
+            if FPListfile1[i] == FPListfile2[j]:
+                count += 1
+                break
+    maxL = max(length1, length2)
+    simratio = count / maxL
+    return simratio
+
+if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        if sys.argv[1] != "-h" and sys.argv[1] != "--help":
+            sys.stderr.write("parameter not defined\n")
+            sys.stderr.write("please use -h|--help to get usage!")
+            sys.exit()
+        print("usage: ./codesim [-h|--help] code1 code2")
+    if len(sys.argv) == 3:
+        ratio = similarity(sys.argv[1], sys.argv[2])
+        print("%.2f%%" %(ratio*100))
