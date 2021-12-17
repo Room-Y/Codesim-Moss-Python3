@@ -1,9 +1,5 @@
 # Codesim-Moss-Python3
-This project is based on moss method to judge the similarity of two C++ source files.
-
-# codesim 
-
-The codesim compare is to identify possible assignment plagiarism by measuring two C++ source code similarity.
+This project is based on moss method to judge the similarity of two C++ source code files.
 
 ## Environment
 
